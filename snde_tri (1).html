@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNDE — Tri des Adresses par Secteur</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #ffffff;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: #ffffff;
+    border-bottom: 2px solid #e8e8e8;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0a3d62;
+    letter-spacing: -0.5px;
+  }
+
+  .header h1 span {
+    color: #2e86de;
+    font-weight: 500;
+  }
+
+  .badge {
+    background: #f0f7ff;
+    color: #2e86de;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid #d0e4f7;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  /* Upload Zone */
+  .upload-zone {
+    border: 2px dashed #c8d6e5;
+    border-radius: 12px;
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: #fafcff;
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: #2e86de;
+    background: #f0f7ff;
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .upload-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
+    background: #e8f2fc;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .upload-icon svg { width: 28px; height: 28px; color: #2e86de; }
+
+  .upload-zone h3 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+  }
+
+  .upload-zone p {
+    font-size: 13px;
+    color: #8395a7;
+  }
+
+  /* Status & Loader */
+  .status {
+    margin-top: 20px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+  }
+
+  .status.info { display: block; background: #e8f2fc; color: #0a3d62; border: 1px solid #b8d4f0; }
+  .status.success { display: block; background: #e6f9ee; color: #1a6b3c; border: 1px solid #b5e8cb; }
+  .status.error { display: block; background: #fef0f0; color: #b91c1c; border: 1px solid #f5c6c6; }
+
+  .loader {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #2e86de;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Controls bar */
+  .controls {
+    display: none;
+    margin-top: 24px;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .controls.visible { display: flex; }
+
+  .controls label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+  }
+
+  .controls select {
+    padding: 8px 14px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+    color: #1a1a2e;
+    cursor: pointer;
+    min-width: 140px;
+  }
+
+  .btn {
+    padding: 9px 20px;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: #2e86de;
+    color: #fff;
+  }
+
+  .btn-primary:hover { background: #1a6fc4; }
+
+  .btn-export {
+    background: #0a3d62;
+    color: #fff;
+    margin-left: auto;
+  }
+
+  .btn-export:hover { background: #082f4f; }
+
+  /* Stats strip */
+  .stats {
+    display: none;
+    margin-top: 16px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .stats.visible { display: flex; }
+
+  .stat-card {
+    flex: 1;
+    min-width: 160px;
+    background: #ffffff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+
+  .stat-card .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8395a7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-card .value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0a3d62;
+    margin-top: 2px;
+  }
+
+  /* Table */
+  .table-wrap {
+    display: none;
+    margin-top: 20px;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .table-wrap.visible { display: block; }
+
+  .table-scroll {
+    max-height: 70vh;
+    overflow: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  thead th {
+    background: #0a3d62;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 12px 14px;
+    text-align: left;
+    white-space: nowrap;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: #f8fafc; }
+
+  tbody td {
+    padding: 10px 14px;
+    white-space: nowrap;
+  }
+
+  .sector-row td {
+    background: #e8f2fc;
+    font-weight: 700;
+    color: #0a3d62;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-bottom: 2px solid #b8d4f0;
+  }
+
+  .addr-num {
+    font-weight: 600;
+    color: #2e86de;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 30px 20px;
+    font-size: 12px;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>SNDE <span>Tri Adresses</span></h1>
+  <div class="badge">Outil de tri par secteur</div>
+</div>
+
+<div class="container">
+  <div class="upload-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+    <div class="upload-icon">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 20h16"/></svg>
+    </div>
+    <h3>Glissez votre fichier ici ou cliquez pour parcourir</h3>
+    <p>Formats acceptés : .xlsx, .xls, .csv</p>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="controls" id="controls">
+    <label>Secteur :</label>
+    <select id="sectorFilter"><option value="all">Tous les secteurs</option></select>
+    <button class="btn btn-primary" id="btnSort" onclick="applySort()">Trier</button>
+    <button class="btn btn-export" id="btnExport" onclick="exportXLSX()">Exporter .xlsx</button>
+  </div>
+
+  <div class="stats" id="statsBar">
+    <div class="stat-card"><div class="label">Lignes</div><div class="value" id="statRows">0</div></div>
+    <div class="stat-card"><div class="label">Secteurs</div><div class="value" id="statSectors">0</div></div>
+    <div class="stat-card"><div class="label">Colonnes</div><div class="value" id="statCols">0</div></div>
+  </div>
+
+  <div class="table-wrap" id="tableWrap">
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">SNDE — Outil de tri automatique des adresses par secteur</div>
+
+<script>
+let rawData = [];
+let headers = [];
+let sectorCol = -1;
+let addressCol = -1;
+let fileName = '';
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); }));
+dropZone.addEventListener('drop', ev => { if(ev.dataTransfer.files.length) processFile(ev.dataTransfer.files[0]); });
+fileInput.addEventListener('change', ev => { if(ev.target.files.length) processFile(ev.target.files[0]); });
+
+function setStatus(msg, type) {
+  const s = document.getElementById('status');
+  s.className = 'status ' + type;
+  s.innerHTML = msg;
+}
+
+function processFile(file) {
+  fileName = file.name.replace(/\.[^.]+$/, '');
+  setStatus('<span class="loader"></span> Lecture du fichier en cours...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Find the header row (the one containing "Secteur" and "Adresse")
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(json.length, 10); i++) {
+        const row = json[i].map(c => String(c).trim().toLowerCase());
+        if (row.some(c => c.includes('secteur')) && row.some(c => c.includes('adresse'))) {
+          headerIdx = i;
+          break;
+        }
+      }
+
+      if (headerIdx === -1) {
+        setStatus('Colonnes "Secteur" et "Adresse" non trouvées dans le fichier.', 'error');
+        return;
+      }
+
+      headers = json[headerIdx].map(h => String(h).trim());
+
+      // Find sector and address column indices
+      sectorCol = headers.findIndex(h => h.toLowerCase().includes('secteur'));
+      addressCol = headers.findIndex(h => h.toLowerCase().includes('adresse'));
+
+      // Remove empty/index-like first column if present
+      rawData = [];
+      for (let i = headerIdx + 1; i < json.length; i++) {
+        const row = json[i];
+        if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
+        // Check if the row has at least sector or address
+        const sec = row[sectorCol];
+        if (sec === '' || sec === null || sec === undefined) continue;
+        rawData.push(row.map(c => c === null || c === undefined ? '' : c));
+      }
+
+      // Populate sector filter
+      const sectors = [...new Set(rawData.map(r => r[sectorCol]))].filter(s => s !== '').sort((a, b) => {
+        const na = parseFloat(a), nb = parseFloat(b);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return String(a).localeCompare(String(b));
+      });
+
+      const sel = document.getElementById('sectorFilter');
+      sel.innerHTML = '<option value="all">Tous les secteurs</option>';
+      sectors.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = 'Secteur ' + s;
+        sel.appendChild(opt);
+      });
+
+      setStatus('Fichier chargé — ' + rawData.length + ' lignes, ' + sectors.length + ' secteurs détectés.', 'success');
+      document.getElementById('controls').classList.add('visible');
+
+      applySort();
+
+    } catch(err) {
+      setStatus('Erreur de lecture : ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function extractNumber(addr) {
+  let s = String(addr).trim().toUpperCase();
+
+  // Nettoyage des suffixes (sous-unités) qui polluent l'extraction
+  let cleaned = s.replace(/\s+\d[A-Z]$/, '');         // 0B, 1A, 0C...
+  cleaned = cleaned.replace(/\s+1\/2\s*[A-Z]?$/, ''); // 1/2, 1/2 B
+  cleaned = cleaned.replace(/\s+APPT\d*$/, '');        // APPT01
+  cleaned = cleaned.replace(/\s+PHAS\s*$/, '');        // PHAS
+
+  // 1) Pattern principal SNDE : N / ND / NO / N- / N: suivi de chiffres
+  let m = cleaned.match(/(?:SUITE?\s*)?(?:(?<![A-Z])N[DO]?\s*[-:.]?\s*)(\d+)/);
+  if (m) {
+    let val = parseInt(m[1], 10);
+    // Si N0 a capturé "0", chercher le vrai numéro juste après
+    if (val === 0) {
+      const rest = cleaned.substring(m.index + m[0].length);
+      const m2 = rest.match(/\s*(\d+)/);
+      if (m2) return parseInt(m2[1], 10);
+    }
+    return val;
+  }
+
+  // 2) SUITE/SUIT + chiffres sans N
+  m = cleaned.match(/SUIT[E]?\s+(\d+)/);
+  if (m) return parseInt(m[1], 10);
+
+  // 3) NO + chiffres (NO348, NO 6)
+  m = cleaned.match(/\bNO\s*(\d+)/);
+  if (m) return parseInt(m[1], 10);
+
+  // 4) Nombre paddé 4 chiffres (0066, 0174, 9202)
+  m = cleaned.match(/(?<![A-Za-z])(\d{4})(?!\d)/);
+  if (m) return parseInt(m[1], 10);
+
+  // 5) Nombres autonomes : pas collés à une lettre avant, ignorer ceux collés après (SECT03, KE3)
+  const allMatches = [...cleaned.matchAll(/(?<![A-Za-z])(\d+)/g)];
+  const cleanNums = [];
+  for (const match of allMatches) {
+    const endPos = match.index + match[0].length;
+    if (endPos < cleaned.length && /[A-Za-z]/.test(cleaned[endPos])) continue;
+    cleanNums.push(parseInt(match[1], 10));
+  }
+  if (cleanNums.length) return cleanNums[0];
+
+  // 6) Dernier recours
+  const nums = [...cleaned.matchAll(/(?<![A-Za-z])(\d+)/g)].map(x => parseInt(x[1], 10));
+  if (nums.length) return nums[nums.length - 1];
+
+  return 999999;
+}
+
+function applySort() {
+  const filterVal = document.getElementById('sectorFilter').value;
+
+  let data = filterVal === 'all' ? [...rawData] : rawData.filter(r => String(r[sectorCol]) === filterVal);
+
+  // Sort: first by sector (numeric), then by address number
+  data.sort((a, b) => {
+    const sa = parseFloat(a[sectorCol]) || 0;
+    const sb = parseFloat(b[sectorCol]) || 0;
+    if (sa !== sb) return sa - sb;
+    return extractNumber(a[addressCol]) - extractNumber(b[addressCol]);
+  });
+
+  // Stats
+  const sectors = [...new Set(data.map(r => r[sectorCol]))];
+  document.getElementById('statRows').textContent = data.length;
+  document.getElementById('statSectors').textContent = sectors.length;
+  document.getElementById('statCols').textContent = headers.length;
+  document.getElementById('statsBar').classList.add('visible');
+
+  // Build table
+  const thead = document.getElementById('tableHead');
+  const tbody = document.getElementById('tableBody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  // Header row
+  const tr = document.createElement('tr');
+  headers.forEach((h, i) => {
+    if (h === '' || h.startsWith('Unnamed')) return;
+    const th = document.createElement('th');
+    th.textContent = h;
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+
+  // Visible column indices (skip unnamed)
+  const visCols = headers.map((h, i) => ({ h, i })).filter(x => x.h !== '' && !x.h.startsWith('Unnamed'));
+
+  // Group by sector for separator rows
+  let lastSector = null;
+  data.forEach(row => {
+    const sec = row[sectorCol];
+    if (sec !== lastSector) {
+      lastSector = sec;
+      const sepTr = document.createElement('tr');
+      sepTr.className = 'sector-row';
+      const td = document.createElement('td');
+      td.colSpan = visCols.length;
+      td.textContent = 'Secteur ' + sec;
+      sepTr.appendChild(td);
+      tbody.appendChild(sepTr);
+    }
+
+    const rowTr = document.createElement('tr');
+    visCols.forEach(vc => {
+      const td = document.createElement('td');
+      let val = row[vc.i];
+      // Format dates
+      if (val instanceof Date) {
+        val = val.toLocaleDateString('fr-FR');
+      }
+      td.textContent = val;
+      // Highlight address number
+      if (vc.i === addressCol) {
+        const num = extractNumber(val);
+        if (num !== 999999) td.classList.add('addr-num');
+      }
+      rowTr.appendChild(td);
+    });
+    tbody.appendChild(rowTr);
+  });
+
+  document.getElementById('tableWrap').classList.add('visible');
+}
+
+function exportXLSX() {
+  const filterVal = document.getElementById('sectorFilter').value;
+  let data = filterVal === 'all' ? [...rawData] : rawData.filter(r => String(r[sectorCol]) === filterVal);
+
+  data.sort((a, b) => {
+    const sa = parseFloat(a[sectorCol]) || 0;
+    const sb = parseFloat(b[sectorCol]) || 0;
+    if (sa !== sb) return sa - sb;
+    return extractNumber(a[addressCol]) - extractNumber(b[addressCol]);
+  });
+
+  // Filter visible columns
+  const visCols = headers.map((h, i) => ({ h, i })).filter(x => x.h !== '' && !x.h.startsWith('Unnamed'));
+  const exportHeaders = visCols.map(x => x.h);
+  const exportData = data.map(row => visCols.map(vc => {
+    let v = row[vc.i];
+    if (v instanceof Date) v = v.toLocaleDateString('fr-FR');
+    return v;
+  }));
+
+  const ws = XLSX.utils.aoa_to_sheet([exportHeaders, ...exportData]);
+
+  // Set column widths
+  ws['!cols'] = exportHeaders.map(h => ({ wch: Math.max(h.length + 2, 14) }));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Tri_Adresses');
+  XLSX.writeFile(wb, fileName + '_trié.xlsx');
+}
+</script>
+
+</body>
+</html>
