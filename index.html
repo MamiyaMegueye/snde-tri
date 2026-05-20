@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SNDE — Tri des Adresses par Secteur</title>
+<title>SNDE — Tri Automatique des Adresses par Secteur</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -115,6 +115,7 @@
 
   .status.info { display: block; background: #e8f2fc; color: #0a3d62; border: 1px solid #b8d4f0; }
   .status.success { display: block; background: #e6f9ee; color: #1a6b3c; border: 1px solid #b5e8cb; }
+  .status.warn { display: block; background: #fff8e6; color: #8a6d1a; border: 1px solid #f0e0a8; }
   .status.error { display: block; background: #fef0f0; color: #b91c1c; border: 1px solid #f5c6c6; }
 
   .loader {
@@ -131,15 +132,52 @@
 
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Column mapping panel */
+  .mapping {
+    display: none;
+    margin-top: 20px;
+    padding: 18px 20px;
+    background: #f8fafc;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    gap: 18px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .mapping.visible { display: flex; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  .field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8395a7;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .field select {
+    padding: 8px 14px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    background: #fff;
+    color: #1a1a2e;
+    cursor: pointer;
+    min-width: 200px;
+  }
+
   /* Controls bar */
   .controls {
     display: none;
-    margin-top: 24px;
+    margin-top: 16px;
     padding: 16px 20px;
     background: #f8fafc;
     border: 1px solid #e8e8e8;
     border-radius: 10px;
-    gap: 12px;
+    gap: 14px;
     align-items: center;
     flex-wrap: wrap;
   }
@@ -164,6 +202,19 @@
     min-width: 140px;
   }
 
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle input { cursor: pointer; width: 16px; height: 16px; }
+
   .btn {
     padding: 9px 20px;
     border: none;
@@ -175,19 +226,10 @@
     transition: all 0.2s;
   }
 
-  .btn-primary {
-    background: #2e86de;
-    color: #fff;
-  }
-
+  .btn-primary { background: #2e86de; color: #fff; }
   .btn-primary:hover { background: #1a6fc4; }
 
-  .btn-export {
-    background: #0a3d62;
-    color: #fff;
-    margin-left: auto;
-  }
-
+  .btn-export { background: #0a3d62; color: #fff; margin-left: auto; }
   .btn-export:hover { background: #082f4f; }
 
   /* Stats strip */
@@ -202,7 +244,7 @@
 
   .stat-card {
     flex: 1;
-    min-width: 160px;
+    min-width: 140px;
     background: #ffffff;
     border: 1px solid #e8e8e8;
     border-radius: 10px;
@@ -235,22 +277,11 @@
 
   .table-wrap.visible { display: block; }
 
-  .table-scroll {
-    max-height: 70vh;
-    overflow: auto;
-  }
+  .table-scroll { max-height: 70vh; overflow: auto; }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
-  thead {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
+  thead { position: sticky; top: 0; z-index: 2; }
 
   thead th {
     background: #0a3d62;
@@ -264,33 +295,29 @@
     letter-spacing: 0.3px;
   }
 
-  tbody tr {
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.15s;
-  }
-
+  tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
   tbody tr:hover { background: #f8fafc; }
-
-  tbody td {
-    padding: 10px 14px;
-    white-space: nowrap;
-  }
+  tbody td { padding: 10px 14px; white-space: nowrap; }
 
   .sector-row td {
-    background: #e8f2fc;
+    background: #0a3d62;
     font-weight: 700;
-    color: #0a3d62;
+    color: #ffffff;
     font-size: 13px;
     padding: 10px 14px;
-    border-bottom: 2px solid #b8d4f0;
   }
 
-  .addr-num {
+  .subsector-row td {
+    background: #e8f2fc;
     font-weight: 600;
-    color: #2e86de;
+    color: #0a3d62;
+    font-size: 12px;
+    padding: 7px 14px 7px 28px;
+    border-bottom: 1px solid #b8d4f0;
   }
 
-  /* Footer */
+  .addr-num { font-weight: 600; color: #2e86de; }
+
   .footer {
     text-align: center;
     padding: 30px 20px;
@@ -302,8 +329,8 @@
 <body>
 
 <div class="header">
-  <h1>SNDE <span>Tri Adresses</span></h1>
-  <div class="badge">Outil de tri par secteur</div>
+  <h1>SNDE <span>Tri Automatique</span></h1>
+  <div class="badge">Tri par secteur — tout fichier</div>
 </div>
 
 <div class="container">
@@ -313,21 +340,38 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 20h16"/></svg>
     </div>
     <h3>Glissez votre fichier ici ou cliquez pour parcourir</h3>
-    <p>Formats acceptés : .xlsx, .xls, .csv</p>
+    <p>Formats acceptés : .xlsx, .xls, .csv — n'importe quel fichier avec une colonne secteur et une colonne adresse</p>
   </div>
 
   <div class="status" id="status"></div>
 
+  <!-- Choix des colonnes (auto-détecté, corrigeable) -->
+  <div class="mapping" id="mapping">
+    <div class="field">
+      <label>Colonne Secteur</label>
+      <select id="colSector" onchange="rebuild()"></select>
+    </div>
+    <div class="field">
+      <label>Colonne Adresse</label>
+      <select id="colAddress" onchange="rebuild()"></select>
+    </div>
+  </div>
+
   <div class="controls" id="controls">
     <label>Secteur :</label>
     <select id="sectorFilter"><option value="all">Tous les secteurs</option></select>
-    <button class="btn btn-primary" id="btnSort" onclick="applySort()">Trier</button>
-    <button class="btn btn-export" id="btnExport" onclick="exportXLSX()">Exporter .xlsx</button>
+    <label class="toggle">
+      <input type="checkbox" id="useSub" onchange="rebuild()">
+      Détecter les sous-secteurs
+    </label>
+    <button class="btn btn-primary" onclick="rebuild()">Trier</button>
+    <button class="btn btn-export" onclick="exportXLSX()">Exporter .xlsx</button>
   </div>
 
   <div class="stats" id="statsBar">
     <div class="stat-card"><div class="label">Lignes</div><div class="value" id="statRows">0</div></div>
     <div class="stat-card"><div class="label">Secteurs</div><div class="value" id="statSectors">0</div></div>
+    <div class="stat-card" id="cardSub"><div class="label">Sous-secteurs</div><div class="value" id="statSub">0</div></div>
     <div class="stat-card"><div class="label">Colonnes</div><div class="value" id="statCols">0</div></div>
   </div>
 
@@ -344,8 +388,8 @@
 <div class="footer">SNDE — Outil de tri automatique des adresses par secteur</div>
 
 <script>
-let rawData = [];
-let headers = [];
+let rawData = [];      // toutes les lignes de données (tableaux)
+let headers = [];      // noms de colonnes
 let sectorCol = -1;
 let addressCol = -1;
 let fileName = '';
@@ -364,6 +408,9 @@ function setStatus(msg, type) {
   s.innerHTML = msg;
 }
 
+/* =====================================================================
+   LECTURE DU FICHIER + DÉTECTION AUTOMATIQUE DES COLONNES
+   ===================================================================== */
 function processFile(file) {
   fileName = file.name.replace(/\.[^.]+$/, '');
   setStatus('<span class="loader"></span> Lecture du fichier en cours...', 'info');
@@ -375,57 +422,59 @@ function processFile(file) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      // Find the header row (the one containing "Secteur" and "Adresse")
-      let headerIdx = -1;
-      for (let i = 0; i < Math.min(json.length, 10); i++) {
-        const row = json[i].map(c => String(c).trim().toLowerCase());
-        if (row.some(c => c.includes('secteur')) && row.some(c => c.includes('adresse'))) {
-          headerIdx = i;
-          break;
-        }
+      // 1) Trouver la ligne d'en-tête : celle qui a le plus de cellules texte
+      //    non vides dans les 15 premières lignes (gère les lignes vides en tête).
+      let headerIdx = 0, bestScore = -1;
+      for (let i = 0; i < Math.min(json.length, 15); i++) {
+        const row = json[i] || [];
+        const score = row.filter(c => String(c).trim() !== '' && isNaN(parseFloat(c))).length;
+        if (score > bestScore) { bestScore = score; headerIdx = i; }
       }
 
-      if (headerIdx === -1) {
-        setStatus('Colonnes "Secteur" et "Adresse" non trouvées dans le fichier.', 'error');
-        return;
-      }
+      headers = (json[headerIdx] || []).map(h => String(h).trim());
 
-      headers = json[headerIdx].map(h => String(h).trim());
-
-      // Find sector and address column indices
-      sectorCol = headers.findIndex(h => h.toLowerCase().includes('secteur'));
-      addressCol = headers.findIndex(h => h.toLowerCase().includes('adresse'));
-
-      // Remove empty/index-like first column if present
+      // 2) Construire les données brutes
       rawData = [];
       for (let i = headerIdx + 1; i < json.length; i++) {
         const row = json[i];
         if (!row || row.every(c => c === '' || c === null || c === undefined)) continue;
-        // Check if the row has at least sector or address
-        const sec = row[sectorCol];
-        if (sec === '' || sec === null || sec === undefined) continue;
         rawData.push(row.map(c => c === null || c === undefined ? '' : c));
       }
 
-      // Populate sector filter
-      const sectors = [...new Set(rawData.map(r => r[sectorCol]))].filter(s => s !== '').sort((a, b) => {
-        const na = parseFloat(a), nb = parseFloat(b);
-        if (!isNaN(na) && !isNaN(nb)) return na - nb;
-        return String(a).localeCompare(String(b));
-      });
+      if (!headers.length || !rawData.length) {
+        setStatus('Fichier vide ou illisible.', 'error');
+        return;
+      }
 
-      const sel = document.getElementById('sectorFilter');
-      sel.innerHTML = '<option value="all">Tous les secteurs</option>';
-      sectors.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s; opt.textContent = 'Secteur ' + s;
-        sel.appendChild(opt);
-      });
+      // 3) Auto-détection des colonnes secteur & adresse
+      sectorCol = guessColumn(['secteur', 'sect', 'zone', 'quartier']);
+      addressCol = guessColumn(['adresse', 'addr', 'rue', 'lieu', 'emplacement']);
 
-      setStatus('Fichier chargé — ' + rawData.length + ' lignes, ' + sectors.length + ' secteurs détectés.', 'success');
+      // Repli : si pas trouvé, prendre 1re et 2e colonne texte
+      if (sectorCol === -1) sectorCol = 0;
+      if (addressCol === -1) addressCol = Math.min(1, headers.length - 1);
+
+      // 4) Remplir les menus de colonnes
+      fillColumnSelect('colSector', sectorCol);
+      fillColumnSelect('colAddress', addressCol);
+      document.getElementById('mapping').classList.add('visible');
       document.getElementById('controls').classList.add('visible');
 
-      applySort();
+      // 5) Détecter si des sous-secteurs existent et activer l'option auto
+      const ratio = subsectorCoverage();
+      const useSub = document.getElementById('useSub');
+      useSub.checked = ratio >= 0.4; // au moins 40% des adresses ont un sous-secteur
+
+      let msg = 'Fichier chargé — ' + rawData.length + ' lignes. Colonnes détectées : « '
+              + (headers[sectorCol] || '?') + ' » (secteur) et « ' + (headers[addressCol] || '?') + ' » (adresse).';
+      if (ratio >= 0.4) {
+        msg += ' Sous-secteurs détectés dans ' + Math.round(ratio*100) + '% des adresses — tri à 3 niveaux activé.';
+      } else {
+        msg += ' Pas de sous-secteur récurrent — tri secteur → numéro.';
+      }
+      setStatus(msg, ratio >= 0.4 ? 'success' : 'info');
+
+      rebuild();
 
     } catch(err) {
       setStatus('Erreur de lecture : ' + err.message, 'error');
@@ -434,102 +483,265 @@ function processFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+/* Cherche l'index de colonne dont le nom contient un des mots-clés */
+function guessColumn(keywords) {
+  for (const kw of keywords) {
+    const i = headers.findIndex(h => h.toLowerCase().includes(kw));
+    if (i !== -1) return i;
+  }
+  return -1;
+}
+
+/* Remplit un <select> avec toutes les colonnes nommées */
+function fillColumnSelect(selId, selected) {
+  const sel = document.getElementById(selId);
+  sel.innerHTML = '';
+  headers.forEach((h, i) => {
+    if (h === '' || h.toLowerCase().startsWith('unnamed')) return;
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = h;
+    if (i === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+/* Part des adresses qui contiennent un sous-secteur détectable */
+function subsectorCoverage() {
+  if (!rawData.length) return 0;
+  const sample = rawData.slice(0, Math.min(rawData.length, 800));
+  let hits = 0;
+  sample.forEach(r => { if (detectSubsector(r[addressCol]).key !== '~~~') hits++; });
+  return hits / sample.length;
+}
+
+/* =====================================================================
+   DÉTECTION AUTOMATIQUE DU SOUS-SECTEUR
+   Le sous-secteur est la partie qui IDENTIFIE le groupe au début de
+   l'adresse, quel que soit son type. Deux familles gérées :
+
+     A) NUMÉRO de secteur  : "SECT 6", "SECT 6 EXT", "S6", "ARS 3",
+        "ARAFAT 5 1251"...  -> étiquette "S6", "S6 EXT"...
+     B) ÉTIQUETTE texte     : modules NOTAIRE "MOD A/B/C...",
+        lotissements "BMCI", "ANAT", "KE3", "SOCOGIM"...
+        ou, à défaut, le premier mot significatif de l'adresse.
+
+   Le numéro de rue (fin de l'adresse) n'est jamais pris pour le
+   sous-secteur. Si rien n'est identifiable -> key '~~~' (en fin de tri).
+   Renvoie { key (tri), label (affichage) }.
+   ===================================================================== */
+
+// Lotissements / quartiers connus (variantes regroupées vers une forme normale)
+var LOT_KEYWORDS = ['BMCI','MBCI','BCI','BMC','KE3','ANATT','ANAT','SOCOGIM',
+                    'SOCO','ATOIT','ATOI','BHM','PRK','MPI','PLAGE','NOT'];
+var LOT_NORMALIZE = { 'MBCI':'BMCI','BCI':'BMCI','BMC':'BMCI','ANATT':'ANAT',
+                      'SOCO':'SOCOGIM','ATOI':'ATOIT' };
+
+// --- Famille A : numéro de secteur (logique ARAFAT validée) ---
+function detectNumericSector(s) {
+  const ext = /EXT/.test(s);
+  // Neutraliser "KE 3" (lotissement) pour ne pas le lire comme secteur 3
+  const s2 = s.replace(/\bK\s*E\s*3\b/g, 'KE_LOT');
+  let cand = null;
+  const patterns = [
+    /\bS(?:ECTEUR|ECTUR|ECRT|ECT|EDT|EVCT|CTR?|CT|EC|ET|T)\.?\s*0*(\d+)/, // exige SECT/SxT...
+    /\bAR?S\s*0*(\d+)/,
+    /\bAR\w*?S?\w*?\s*0*(\d+)\s*(?:EXT\w*\s*)?N/,
+    /\bA\s*0*(\d+)\s*(?:EXT\w*\s*)?N/,
+    /[-\s]0*(\d+)[-\s]*N[O°]?/,
+    /\b0*(\d+)\s*(?:EXT\w*\s*)?N[O°]?\b/
+  ];
+  for (const p of patterns) {
+    const m = s2.match(p);
+    if (m) { const v = parseInt(m[1],10); if (v>=1 && v<=60) { cand=v; break; } }
+  }
+  if (cand === null) {
+    const m = s2.match(/[A-Z]+?(\d+)\s*(?:EXT\w*\s*)?N/);
+    if (m) { const v = parseInt(m[1],10); if (v>=1 && v<=60) cand=v; }
+  }
+  if (cand === null) {
+    const m = s2.match(/^[A-Z]{2,}\s*0*(\d+)\b/);
+    if (m) { const v = parseInt(m[1],10); if (v>=1 && v<=60) cand=v; }
+  }
+  if (cand === null) return null;
+  const key = 'B' + String(cand).padStart(3,'0') + (ext?'1':'0'); // 'B' = secteurs avant lotissements alpha
+  const label = 'S' + cand + (ext ? ' EXT' : '');
+  return { key, label };
+}
+
+// --- Famille B : étiquette texte (module / lotissement / 1er mot) ---
+function detectTextLabel(s) {
+  // Tronquer au début du numéro de rue pour ne garder que l'étiquette
+  let head;
+  const m = s.match(/\bN[O°]?\s*[-:.]?\s*\d/);
+  if (m) head = s.substring(0, m.index);
+  else head = s.split(/\d{2,}/)[0];
+  head = head.replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  const hns = head.replace(/ /g,'');
+
+  // Module NOTAIRE : MOD A / MOD B / MODB...
+  let mm = hns.match(/MOD([A-Z])/);
+  if (mm) return { key: 'T_MOD' + mm[1], label: 'MOD ' + mm[1] };
+
+  // Lotissement connu
+  for (const kw of LOT_KEYWORDS) {
+    if (hns.indexOf(kw.replace(/ /g,'')) !== -1) {
+      const norm = LOT_NORMALIZE[kw] || kw;
+      return { key: 'T_' + norm, label: norm };
+    }
+  }
+
+  // À défaut : premier mot alphabétique significatif
+  mm = head.match(/[A-Z]{2,}/);
+  if (mm) return { key: 'T_' + mm[0], label: mm[0] };
+
+  return null;
+}
+
+function detectSubsector(addr) {
+  const s = String(addr).trim().toUpperCase();
+  if (!s) return { key: '~~~', label: '' };
+
+  // Si un lotissement-texte clair est présent (et pas de "SECT" explicite),
+  // on le préfère au numéro (évite que "KE3" devienne "S3", etc.)
+  if (/\b(BMCI|MBCI|ANAT|ATOI|KE3|MOD|SOCOGIM|SOCO|BHM|PRK|MPI|PLAGE)\b/.test(s)
+      && !/\bSECT/.test(s)) {
+    const t = detectTextLabel(s);
+    if (t) return t;
+  }
+
+  // 1) numéro de secteur prioritaire (ARAFAT, K EXT S3...)
+  const n = detectNumericSector(s);
+  if (n) return n;
+
+  // 2) sinon étiquette texte
+  const t = detectTextLabel(s);
+  if (t) return t;
+
+  return { key: '~~~', label: '' };
+}
+
+/* =====================================================================
+   EXTRACTION DU NUMÉRO DE RUE
+   Gère : "N 1173", "N1276", "N° 36", "NO 546", "N0 992" (->992),
+   "-1122", "7/179", ou à défaut le dernier grand nombre.
+   ===================================================================== */
 function extractNumber(addr) {
-  let s = String(addr).trim().toUpperCase();
+  const s = String(addr).trim().toUpperCase();
 
-  // Nettoyage des suffixes (sous-unités) qui polluent l'extraction
-  let cleaned = s.replace(/\s+\d[A-Z]$/, '');         // 0B, 1A, 0C...
-  cleaned = cleaned.replace(/\s+1\/2\s*[A-Z]?$/, ''); // 1/2, 1/2 B
-  cleaned = cleaned.replace(/\s+APPT\d*$/, '');        // APPT01
-  cleaned = cleaned.replace(/\s+PHAS\s*$/, '');        // PHAS
-
-  // 1) Pattern principal SNDE : N / ND / NO / N- / N: suivi de chiffres
-  let m = cleaned.match(/(?:SUITE?\s*)?(?:(?<![A-Z])N[DO]?\s*[-:.]?\s*)(\d+)/);
+  let m = s.match(/N[O°]?\s*[-:.]?\s*0*(\d+)/);
   if (m) {
     let val = parseInt(m[1], 10);
-    // Si N0 a capturé "0", chercher le vrai numéro juste après
     if (val === 0) {
-      const rest = cleaned.substring(m.index + m[0].length);
-      const m2 = rest.match(/\s*(\d+)/);
+      const rest = s.substring(m.index + m[0].length);
+      const m2 = rest.match(/\s*0*(\d+)/);
       if (m2) return parseInt(m2[1], 10);
     }
     return val;
   }
 
-  // 2) SUITE/SUIT + chiffres sans N
-  m = cleaned.match(/SUIT[E]?\s+(\d+)/);
+  m = s.match(/\/\s*0*(\d+)/);
   if (m) return parseInt(m[1], 10);
 
-  // 3) NO + chiffres (NO348, NO 6)
-  m = cleaned.match(/\bNO\s*(\d+)/);
-  if (m) return parseInt(m[1], 10);
-
-  // 4) Nombre paddé 4 chiffres (0066, 0174, 9202)
-  m = cleaned.match(/(?<![A-Za-z])(\d{4})(?!\d)/);
-  if (m) return parseInt(m[1], 10);
-
-  // 5) Nombres autonomes : pas collés à une lettre avant, ignorer ceux collés après (SECT03, KE3)
-  const allMatches = [...cleaned.matchAll(/(?<![A-Za-z])(\d+)/g)];
-  const cleanNums = [];
-  for (const match of allMatches) {
-    const endPos = match.index + match[0].length;
-    if (endPos < cleaned.length && /[A-Za-z]/.test(cleaned[endPos])) continue;
-    cleanNums.push(parseInt(match[1], 10));
-  }
-  if (cleanNums.length) return cleanNums[0];
-
-  // 6) Dernier recours
-  const nums = [...cleaned.matchAll(/(?<![A-Za-z])(\d+)/g)].map(x => parseInt(x[1], 10));
+  const nums = [...s.matchAll(/(\d+)/g)].map(x => parseInt(x[1], 10));
+  const big = nums.filter(n => n > 60);
+  if (big.length) return big[big.length - 1];
   if (nums.length) return nums[nums.length - 1];
 
   return 999999;
 }
 
-function applySort() {
+/* =====================================================================
+   TRI + AFFICHAGE
+   ===================================================================== */
+function compareRows(a, b, useSub) {
+  // Secteur : tri numérique si possible, sinon alphabétique
+  const va = a[sectorCol], vb = b[sectorCol];
+  const na = parseFloat(va), nb = parseFloat(vb);
+  if (!isNaN(na) && !isNaN(nb)) {
+    if (na !== nb) return na - nb;
+  } else {
+    const c = String(va).localeCompare(String(vb));
+    if (c !== 0) return c;
+  }
+
+  if (useSub) {
+    const ka = detectSubsector(a[addressCol]).key;
+    const kb = detectSubsector(b[addressCol]).key;
+    if (ka !== kb) return ka.localeCompare(kb); // '~~~' (sans sous-secteur) en dernier
+  }
+
+  return extractNumber(a[addressCol]) - extractNumber(b[addressCol]);
+}
+
+function getSortedData() {
+  sectorCol = parseInt(document.getElementById('colSector').value, 10);
+  addressCol = parseInt(document.getElementById('colAddress').value, 10);
+  const useSub = document.getElementById('useSub').checked;
   const filterVal = document.getElementById('sectorFilter').value;
 
   let data = filterVal === 'all' ? [...rawData] : rawData.filter(r => String(r[sectorCol]) === filterVal);
+  data.sort((a, b) => compareRows(a, b, useSub));
+  return { data, useSub };
+}
 
-  // Sort: first by sector (numeric), then by address number
-  data.sort((a, b) => {
-    const sa = parseFloat(a[sectorCol]) || 0;
-    const sb = parseFloat(b[sectorCol]) || 0;
-    if (sa !== sb) return sa - sb;
-    return extractNumber(a[addressCol]) - extractNumber(b[addressCol]);
+function refreshSectorFilter() {
+  const sectors = [...new Set(rawData.map(r => r[sectorCol]))].filter(s => s !== '').sort((a, b) => {
+    const na = parseFloat(a), nb = parseFloat(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return String(a).localeCompare(String(b));
   });
+  const sel = document.getElementById('sectorFilter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="all">Tous les secteurs</option>';
+  sectors.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = 'Secteur ' + s;
+    sel.appendChild(opt);
+  });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+function rebuild() {
+  if (!rawData.length) return;
+  sectorCol = parseInt(document.getElementById('colSector').value, 10);
+  addressCol = parseInt(document.getElementById('colAddress').value, 10);
+  refreshSectorFilter();
+
+  const { data, useSub } = getSortedData();
 
   // Stats
   const sectors = [...new Set(data.map(r => r[sectorCol]))];
+  const subSet = new Set(data.map(r => detectSubsector(r[addressCol]).label));
+  const subCount = [...subSet].filter(k => k !== '').length;
+
   document.getElementById('statRows').textContent = data.length;
   document.getElementById('statSectors').textContent = sectors.length;
-  document.getElementById('statCols').textContent = headers.length;
+  document.getElementById('statSub').textContent = subCount;
+  document.getElementById('statCols').textContent = headers.filter(h => h !== '' && !h.toLowerCase().startsWith('unnamed')).length;
+  document.getElementById('cardSub').style.display = useSub ? 'block' : 'none';
   document.getElementById('statsBar').classList.add('visible');
 
-  // Build table
+  // Colonnes visibles (on ignore les colonnes sans nom)
+  const visCols = headers.map((h, i) => ({ h, i })).filter(x => x.h !== '' && !x.h.toLowerCase().startsWith('unnamed'));
+
+  // En-tête
   const thead = document.getElementById('tableHead');
   const tbody = document.getElementById('tableBody');
   thead.innerHTML = '';
   tbody.innerHTML = '';
-
-  // Header row
   const tr = document.createElement('tr');
-  headers.forEach((h, i) => {
-    if (h === '' || h.startsWith('Unnamed')) return;
-    const th = document.createElement('th');
-    th.textContent = h;
-    tr.appendChild(th);
-  });
+  visCols.forEach(vc => { const th = document.createElement('th'); th.textContent = vc.h; tr.appendChild(th); });
   thead.appendChild(tr);
 
-  // Visible column indices (skip unnamed)
-  const visCols = headers.map((h, i) => ({ h, i })).filter(x => x.h !== '' && !x.h.startsWith('Unnamed'));
-
-  // Group by sector for separator rows
-  let lastSector = null;
+  // Corps avec lignes-séparateurs
+  let lastSector = null, lastSub = null;
   data.forEach(row => {
     const sec = row[sectorCol];
+    const sub = detectSubsector(row[addressCol]);
+
     if (sec !== lastSector) {
-      lastSector = sec;
+      lastSector = sec; lastSub = null;
       const sepTr = document.createElement('tr');
       sepTr.className = 'sector-row';
       const td = document.createElement('td');
@@ -539,16 +751,23 @@ function applySort() {
       tbody.appendChild(sepTr);
     }
 
+    if (useSub && sub.label !== lastSub) {
+      lastSub = sub.label;
+      const subTr = document.createElement('tr');
+      subTr.className = 'subsector-row';
+      const td = document.createElement('td');
+      td.colSpan = visCols.length;
+      td.textContent = sub.label === '' ? '— Sans sous-secteur —' : 'Sous-secteur ' + sub.label;
+      subTr.appendChild(td);
+      tbody.appendChild(subTr);
+    }
+
     const rowTr = document.createElement('tr');
     visCols.forEach(vc => {
       const td = document.createElement('td');
       let val = row[vc.i];
-      // Format dates
-      if (val instanceof Date) {
-        val = val.toLocaleDateString('fr-FR');
-      }
+      if (val instanceof Date) val = val.toLocaleDateString('fr-FR');
       td.textContent = val;
-      // Highlight address number
       if (vc.i === addressCol) {
         const num = extractNumber(val);
         if (num !== 999999) td.classList.add('addr-num');
@@ -562,18 +781,9 @@ function applySort() {
 }
 
 function exportXLSX() {
-  const filterVal = document.getElementById('sectorFilter').value;
-  let data = filterVal === 'all' ? [...rawData] : rawData.filter(r => String(r[sectorCol]) === filterVal);
-
-  data.sort((a, b) => {
-    const sa = parseFloat(a[sectorCol]) || 0;
-    const sb = parseFloat(b[sectorCol]) || 0;
-    if (sa !== sb) return sa - sb;
-    return extractNumber(a[addressCol]) - extractNumber(b[addressCol]);
-  });
-
-  // Filter visible columns
-  const visCols = headers.map((h, i) => ({ h, i })).filter(x => x.h !== '' && !x.h.startsWith('Unnamed'));
+  if (!rawData.length) return;
+  const { data } = getSortedData();
+  const visCols = headers.map((h, i) => ({ h, i })).filter(x => x.h !== '' && !x.h.toLowerCase().startsWith('unnamed'));
   const exportHeaders = visCols.map(x => x.h);
   const exportData = data.map(row => visCols.map(vc => {
     let v = row[vc.i];
@@ -582,10 +792,7 @@ function exportXLSX() {
   }));
 
   const ws = XLSX.utils.aoa_to_sheet([exportHeaders, ...exportData]);
-
-  // Set column widths
-  ws['!cols'] = exportHeaders.map(h => ({ wch: Math.max(h.length + 2, 14) }));
-
+  ws['!cols'] = exportHeaders.map(h => ({ wch: Math.max(String(h).length + 2, 14) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Tri_Adresses');
   XLSX.writeFile(wb, fileName + '_trié.xlsx');
