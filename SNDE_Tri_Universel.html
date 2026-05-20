@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SNDE — Tri Universel des Adresses par Secteur</title>
+<title>SNDE — Tri Automatique des Adresses par Secteur</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
@@ -329,7 +329,7 @@
 <body>
 
 <div class="header">
-  <h1>SNDE <span>Tri Universel</span></h1>
+  <h1>SNDE <span>Tri Automatique</span></h1>
   <div class="badge">Tri par secteur — tout fichier</div>
 </div>
 
@@ -385,7 +385,7 @@
   </div>
 </div>
 
-<div class="footer">SNDE — Outil universel de tri des adresses par secteur</div>
+<div class="footer">SNDE — Outil de tri automatique des adresses par secteur</div>
 
 <script>
 let rawData = [];      // toutes les lignes de données (tableaux)
@@ -516,7 +516,7 @@ function subsectorCoverage() {
 }
 
 /* =====================================================================
-   DÉTECTION UNIVERSELLE DU SOUS-SECTEUR
+   DÉTECTION AUTOMATIQUE DU SOUS-SECTEUR
    Le sous-secteur est la partie qui IDENTIFIE le groupe au début de
    l'adresse, quel que soit son type. Deux familles gérées :
 
